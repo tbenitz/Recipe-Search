@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personalized Diet & Recipe Hub</title>
+    <style>
+        :root {
+            --primary-color: #4CAF50;
+            --secondary-color: #2c3e50;
+            --background-color: #1e1e1e;
+            --text-color: #ecf0f1;
+            --card-bg-color: #2a2a2a;
+            --border-color: #444;
+            --compliant-color: #27ae60;
+            --warning-color: #f39c12;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* --- Layout & Structure --- */
+        header {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--primary-color);
+        }
+
+        header h1 { margin: 0; font-size: 1.8rem; }
+
+        nav button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            margin-left: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        nav button:hover { background-color: #45a049; }
+        
+        main { padding: 2rem; }
+
+        .section-container { display: none; }
+        .section-container.active { display: block; }
+        h2 { color: var(--primary-color); border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem; }
+        
+        /* --- NEW SEARCH UI STYLES --- */
+        .search-controls {
+            background-color: var(--card-bg-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        .search-type-selector {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
+        }
+        .search-type-selector label { cursor: pointer; }
+
+        .search-input-area, #category-select-container {
+             display: flex; gap: 10px;
+        }
+        .search-input-area input, #category-select-container select {
+            flex-grow: 1; padding: 0.8rem; border: 1px solid var(--border-color); border-radius: 5px;
+            background-color: var(--background-color); color: var(--text-color); font-size: 1rem;
+        }
+        .search-input-area button, #category-select-container button {
+             padding: 0.8rem 1.5rem;
+        }
+
+        .search-status { font-style: italic; color: #aaa; margin-top: 1rem; }
+        
+        /* --- Recipe Grid & Cards --- */
+        .recipe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+        
+        .recipe-card {
+            background-color: var(--card-bg-color); border-radius: 8px; overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); display: flex; flex-direction: column;
+            transition: transform 0.3s; position: relative; cursor: pointer;
+        }
+        .recipe-card:hover { transform: translateY(-5px); }
+        .recipe-card img { width: 100%; height: 200px; object-fit: cover; }
+        .recipe-card-content { padding: 1rem; flex-grow: 1; display: flex; flex-direction: column; }
+        .recipe-card h3 { margin-top: 0; color: var(--primary-color); }
+        .recipe-card-actions { margin-top: auto; padding-top: 1rem; display: flex; justify-content: space-between; }
+
+        .compliance-badge {
+            position: absolute; top: 10px; left: 10px;
+            padding: 0.3rem 0.6rem; border-radius: 5px;
+            color: white; font-weight: bold; font-size: 0.9rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); z-index: 2;
+        }
+        .compliance-badge.compliant { background-color: var(--compliant-color); }
+        .compliance-badge.non-compliant { background-color: var(--warning-color); }
+        
+        /* --- Modals --- */
+        .modal {
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0;
+            width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.7);
+        }
+        .modal-content {
+            background-color: var(--card-bg-color); margin: 5% auto; padding: 2rem;
+            border: 1px solid var(--border-color); border-radius: 8px; width: 90%;
+            max-width: 800px;
+            position: relative;
+        }
+        .close-button {
+            color: #aaa; position: absolute; top: 10px; right: 20px;
+            font-size: 28px; font-weight: bold; cursor: pointer; z-index: 10;
+        }
+        .modal-content .form-group { margin-bottom: 1.5rem; }
+        .modal-content label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        .modal-content input[type="text"], .modal-content select {
+             width: 100%; box-sizing: border-box; padding: 10px; background-color: var(--background-color);
+             border: 1px solid var(--border-color); color: var(--text-color); border-radius: 5px;
+        }
+        
+        /* --- Alerts and Buttons --- */
+        .alert-warning, .alert-info {
+            color: white; padding: 1rem; border-radius: 5px; margin-bottom: 1rem; font-weight: bold;
+        }
+        .alert-warning { background-color: #c0392b; }
+        .alert-info { background-color: var(--warning-color); }
+
+        .action-button, .profile-actions button, .recipe-card-actions button, .modal-content button {
+            background: var(--secondary-color); color: white; border: none; padding: 0.5rem 1rem;
+            border-radius: 5px; cursor: pointer; transition: background-color 0.3s;
+        }
+        .action-button:hover, .profile-actions button:hover, .recipe-card-actions button:hover, .modal-content button:hover {
+            background-color: #3c526a;
+        }
+        
+        .profile-management { margin-top: 2rem; }
+        .profile-actions { display: flex; gap: 10px; align-items: center; margin-bottom: 1rem; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🍏 Recipe search</h1>
+        <nav>
+            <button id="nav-search">Search Recipes</button>
+            <button id="nav-bookmarks">Bookmarks</button>
+            <button id="nav-settings">Settings</button>
+        </nav>
+    </header>
+
+    <main>
+        <section id="search-container" class="section-container active">
+            <h2>Find Your Next Meal</h2>
+
+            <div class="search-controls">
+                <div class="search-type-selector">
+                    <strong>Search by:</strong>
+                    <label><input type="radio" name="search-type" value="smart" checked> Smart Search</label>
+                    <label><input type="radio" name="search-type" value="name"> Name</label>
+                    <label><input type="radio" name="search-type" value="category"> Category</label>
+                </div>
+
+                <div id="text-search-container" class="search-input-area">
+                    <input type="text" id="search-input" placeholder="e.g., chicken soup, beef stir fry...">
+                    <button id="search-button" class="action-button">Search</button>
+                </div>
+                
+                <div id="category-select-container" class="search-input-area" style="display: none;">
+                    <select id="category-select"></select>
+                    <button id="category-search-button" class="action-button">Search</button>
+                </div>
+
+                <div id="search-status" class="search-status"></div>
+            </div>
+
+            <div id="search-results" class="recipe-grid"></div>
+        </section>
+
+        <section id="bookmarks-container" class="section-container">
+            <h2>Bookmarked Recipes</h2>
+            <div id="bookmarks-list" class="recipe-grid"></div>
+        </section>
+
+        <section id="settings-container" class="section-container">
+            <h2>Settings & Profile</h2>
+            <p>Manage your user profile and dietary preferences.</p>
+            <div class="profile-actions">
+                <button id="retake-questionnaire-btn">Update My Profile</button>
+                <button id="new-profile-btn">Create New Profile</button>
+            </div>
+            
+            <div class="profile-management">
+                <h3>Save & Load Profiles</h3>
+                 <div class="profile-actions">
+                    <input type="text" id="profile-name-input" placeholder="Enter profile name to save">
+                    <button id="save-profile-btn" class="action-button">Save Current</button>
+                </div>
+                 <div class="profile-actions">
+                    <select id="profile-select"></select>
+                    <button id="load-profile-btn" class="action-button">Load Profile</button>
+                    <button id="delete-profile-btn" class="action-button">Delete Profile</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="questionnaire-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal('questionnaire-modal')">&times;</span>
+            <h2>Welcome! Let's Personalize Your Plan.</h2>
+            <form id="questionnaire-form">
+                <div class="form-group"><label for="username">What's your name?</label><input type="text" id="username" required></div>
+                <div class="form-group"><label for="diet-select">Choose Your Dietary Preference:</label><select id="diet-select"></select></div>
+                <div class="form-group"><label for="allergies">List any food allergies (comma-separated):</label><input type="text" id="allergies" placeholder="e.g., peanuts, shellfish, soy"></div>
+                <button type="submit" class="action-button">Save My Preferences</button>
+            </form>
+        </div>
+    </div>
+    
+    <div id="recipe-details-modal" class="modal"><div class="modal-content"></div></div>
+
+    <script>
+    // --- CONFIGURATION ---
+    const apiKey = '1'; // Public test key for TheMealDB
+    const API_URL = 'https://www.themealdb.com/api/json/v1/1';
+    
+    const DIETS = [ "No Diet Restrictions", "Carnivore Diet", "Alkaline Diet", "Anti-Inflammatory Diet", "Atkins Diet", "Blood Type Diet", "Bulletproof Diet", "Calorie-Counting / CICO", "DASH Diet", "FODMAP Diet", "Flexitarian Diet", "Fruit-Based Diet (Fruitarian)", "Gluten-Free Diet", "Intermittent Fasting", "Ketogenic (Keto) Diet", "Lacto-Ovo Vegetarian", "Lacto Vegetarian", "Low-Carb Diet", "Low-Fat Diet", "Macrobiotic Diet", "Mediterranean Diet", "MIND Diet", "Monotrophic Diet", "Ornish Diet", "Paleo Diet", "Pescatarian Diet", "Plant-Based Diet", "Raw Food Diet", "Sirtfood Diet", "South Beach Diet", "Therapeutic Lifestyle Changes (TLC) Diet", "Time-Restricted Eating", "Volumetrics Diet", "Vegan Diet", "Vegetarian Diet", "Weight Watchers (WW)", "Whole30" ];
+    
+    const DIET_RULES = {
+        'Carnivore Diet': { disallowed: ['fruit', 'vegetable', 'potato', 'tomato', 'flour', 'sugar', 'rice', 'pasta', 'bread', 'bean', 'lentil', 'nut', 'seed'], allowedCategories: ['Beef', 'Chicken', 'Goat', 'Lamb', 'Pork', 'Seafood', 'Miscellaneous'] },
+        'Gluten-Free Diet': { disallowed: ['flour', 'wheat', 'barley', 'rye', 'bread', 'pasta', 'couscous', 'soy sauce', 'beer'] },
+        'Ketogenic (Keto) Diet': { disallowed: ['sugar', 'potato', 'sweet potato', 'corn', 'bean', 'rice', 'pasta', 'bread', 'flour', 'cereal', 'honey', 'agave', 'maple syrup', 'fruit'] },
+        'Paleo Diet': { disallowed: ['milk', 'cheese', 'yogurt', 'cream', 'bean', 'lentil', 'pea', 'peanut', 'soy', 'tofu', 'grain', 'wheat', 'flour', 'rice', 'pasta', 'bread', 'sugar', 'canola oil', 'vegetable oil'] },
+        'Vegetarian Diet': { allowedCategories: ['Vegetarian', 'Vegan'] },
+        'Vegan Diet': { allowedCategories: ['Vegan'] },
+        'Pescatarian Diet': { allowedCategories: ['Seafood', 'Vegetarian', 'Vegan'] }
+    };
+    
+    const THEMATIC_SEARCH_MAP = {
+        'beef': ['beef', 'steak', 'mince', 'brisket', 'roast beef'], 'chicken': ['chicken', 'chicken breast', 'chicken wings', 'chicken thigh'], 'pork': ['pork', 'bacon', 'ham', 'ribs'],
+        'fish': ['fish', 'salmon', 'tuna', 'cod', 'haddock', 'sea bass'], 'seafood': ['seafood', 'shrimp', 'prawns', 'scallops', 'mussels', 'crab', 'lobster'], 'lamb': ['lamb', 'lamb chop', 'lamb shank'],
+        'egg': ['egg', 'omelette', 'frittata'], 'potato': ['potato', 'potatoes', 'fries', 'chips'], 'soup': ['soup', 'stew', 'casserole', 'chowder', 'bisque']
+    };
+
+    // --- STATE & DOM ELEMENTS ---
+    let currentUserProfile;
+    const searchInput = document.getElementById('search-input');
+    const searchStatus = document.getElementById('search-status');
+    const searchResultsContainer = document.getElementById('search-results');
+    const sections = document.querySelectorAll('.section-container');
+    const textSearchContainer = document.getElementById('text-search-container');
+    const categorySelectContainer = document.getElementById('category-select-container');
+
+    // --- INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+        populateDietDropdown();
+        populateCategoryDropdown();
+        loadUserProfile();
+        updateUI();
+        setupEventListeners();
+    });
+
+    function setupEventListeners() {
+        document.getElementById('nav-search').addEventListener('click', () => showSection('search-container'));
+        document.getElementById('nav-bookmarks').addEventListener('click', () => { showSection('bookmarks-container'); renderBookmarks(); });
+        document.getElementById('nav-settings').addEventListener('click', () => { showSection('settings-container'); populateProfileSelector(); });
+        document.getElementById('search-button').addEventListener('click', performSearch);
+        searchInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') performSearch(); });
+        document.getElementById('category-search-button').addEventListener('click', performSearch);
+        document.querySelectorAll('input[name="search-type"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const isCategorySearch = e.target.value === 'category';
+                textSearchContainer.style.display = isCategorySearch ? 'none' : 'flex';
+                categorySelectContainer.style.display = isCategorySearch ? 'flex' : 'none';
+            });
+        });
+        document.getElementById('questionnaire-form').addEventListener('submit', handleQuestionnaireSubmit);
+        document.getElementById('retake-questionnaire-btn').addEventListener('click', () => {
+            document.getElementById('username').value = currentUserProfile.username;
+            document.getElementById('diet-select').value = currentUserProfile.diet;
+            document.getElementById('allergies').value = currentUserProfile.allergies.join(', ');
+            openModal('questionnaire-modal');
+        });
+        document.getElementById('new-profile-btn').addEventListener('click', resetAndShowQuestionnaire);
+        document.getElementById('save-profile-btn').addEventListener('click', saveProfile);
+        document.getElementById('load-profile-btn').addEventListener('click', loadSelectedProfile);
+        document.getElementById('delete-profile-btn').addEventListener('click', deleteSelectedProfile);
+    }
+
+    async function populateCategoryDropdown() {
+        const data = await apiFetch('categories.php');
+        if (data && data.categories) {
+            const selectEl = document.getElementById('category-select');
+            data.categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.strCategory;
+                option.textContent = category.strCategory;
+                selectEl.appendChild(option);
+            });
+        }
+    }
+
+    async function apiFetch(endpoint) {
+        try {
+            const response = await fetch(`${API_URL}/${endpoint}`);
+            if (!response.ok) { console.warn(`API request to ${endpoint} failed`); return null; }
+            return await response.json();
+        } catch (error) { console.error("API Fetch Error:", error); return null; }
+    }
+
+    async function performSearch() {
+        const searchType = document.querySelector('input[name="search-type"]:checked').value;
+        searchStatus.textContent = `Searching...`;
+        searchResultsContainer.innerHTML = '';
+        
+        let searchPromises = [];
+        let queryWords = [];
+
+        if (searchType === 'smart' || searchType === 'name') {
+            const query = searchInput.value.trim().toLowerCase();
+            if (!query) { searchStatus.textContent = 'Please enter a search term.'; return; }
+            queryWords = query.split(' ').filter(Boolean);
+
+            if (searchType === 'smart') {
+                const searchTerms = new Set();
+                queryWords.forEach(word => {
+                    if (THEMATIC_SEARCH_MAP[word]) {
+                        THEMATIC_SEARCH_MAP[word].forEach(term => searchTerms.add(term));
+                    } else { searchTerms.add(word); }
+                });
+                searchPromises = Array.from(searchTerms).map(term => apiFetch(`search.php?s=${term}`));
+            } else { // 'name' search
+                searchPromises.push(apiFetch(`search.php?s=${query}`));
+            }
+        } else if (searchType === 'category') {
+            const category = document.getElementById('category-select').value;
+            searchPromises.push(apiFetch(`filter.php?c=${category}`));
+        }
+        
+        const results = await Promise.allSettled(searchPromises);
+        
+        const allMeals = new Map();
+        results.forEach(result => {
+            if (result.status === 'fulfilled' && result.value && result.value.meals) {
+                result.value.meals.forEach(meal => allMeals.set(meal.idMeal, meal));
+            }
+        });
+        
+        let uniqueMeals = Array.from(allMeals.values());
+
+        if ((searchType === 'smart' || searchType === 'name') && queryWords.length > 1) {
+            uniqueMeals = uniqueMeals.filter(meal => {
+                const mealTitle = meal.strMeal.toLowerCase();
+                return queryWords.every(word => mealTitle.includes(word));
+            });
+        }
+        
+        if (uniqueMeals.length === 0) {
+            searchStatus.textContent = `No recipes found. Try another search.`;
+            return;
+        }
+
+        searchStatus.textContent = `Found ${uniqueMeals.length} potential matches. Analyzing...`;
+
+        const detailPromises = uniqueMeals.map(meal => apiFetch(`lookup.php?i=${meal.idMeal}`));
+        const detailedMealsData = await Promise.all(detailPromises);
+        
+        const recipesWithCompliance = detailedMealsData.map(data => {
+            if (!data || !data.meals) return null;
+            const recipe = data.meals[0];
+            const compliance = checkRecipeAgainstDiet(recipe, currentUserProfile.diet);
+            return { ...recipe, ...compliance };
+        }).filter(Boolean);
+
+        // --- NEW --- Sort results to show compliant recipes first.
+        recipesWithCompliance.sort((a, b) => b.isCompliant - a.isCompliant);
+
+        const compliantCount = recipesWithCompliance.filter(r => r.isCompliant).length;
+        searchStatus.textContent = `Showing ${recipesWithCompliance.length} results. ${compliantCount} are fully compliant.`;
+        renderSearchResults(recipesWithCompliance);
+    }
+    
+    function checkRecipeAgainstDiet(recipe, dietName) {
+        if (dietName === "No Diet Restrictions") return { isCompliant: true, flaggedIngredients: [] };
+        const rules = DIET_RULES[dietName];
+        if (!rules) return { isCompliant: true, flaggedIngredients: [] };
+        const ingredients = [];
+        for (let i = 1; i <= 20; i++) { if (recipe[`strIngredient${i}`]) { ingredients.push(recipe[`strIngredient${i}`].toLowerCase()); } }
+        const flaggedIngredients = new Set();
+        let isCompliant = true;
+        if (rules.disallowed) { for (const ingredient of ingredients) { if (rules.disallowed.some(keyword => ingredient.includes(keyword))) { isCompliant = false; flaggedIngredients.add(ingredient); } } }
+        if (rules.allowedCategories && !rules.allowedCategories.includes(recipe.strCategory)) { isCompliant = false; flaggedIngredients.add(`Category: ${recipe.strCategory}`); }
+        return { isCompliant, flaggedIngredients: Array.from(flaggedIngredients) };
+    }
+    
+    // --- RENDERING ---
+    function renderSearchResults(recipes) {
+        searchResultsContainer.innerHTML = '';
+        recipes.forEach(recipe => {
+            const isBookmarked = currentUserProfile.bookmarks.some(b => b.idMeal === recipe.idMeal);
+            const card = document.createElement('div');
+            card.className = 'recipe-card';
+            
+            const badgeClass = recipe.isCompliant ? 'compliant' : 'non-compliant';
+            const badgeText = recipe.isCompliant ? '✅ Compliant' : '⚠️ Needs Review';
+
+            card.innerHTML = `
+                <div class="compliance-badge ${badgeClass}">${badgeText}</div>
+                <img src="${recipe.strMealThumb}" alt="${recipe.strMeal}">
+                <div class="recipe-card-content">
+                    <h3>${recipe.strMeal}</h3>
+                    <div class="recipe-card-actions">
+                        <button class="action-button" onclick="toggleBookmark('${recipe.idMeal}', '${recipe.strMeal.replace(/'/g, "\\'")}', '${recipe.strMealThumb}', event)">
+                            ${isBookmarked ? 'Unbookmark' : 'Bookmark'}
+                        </button>
+                    </div>
+                </div>`;
+            card.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON') { getRecipeDetails(recipe.idMeal); }
+            });
+            searchResultsContainer.appendChild(card);
+        });
+    }
+
+    async function getRecipeDetails(id) {
+        const modalContent = document.querySelector('#recipe-details-modal .modal-content');
+        modalContent.innerHTML = `<p>Loading details...</p>`;
+        openModal('recipe-details-modal');
+        const data = await apiFetch(`lookup.php?i=${id}`);
+        if(data && data.meals) {
+            const recipe = data.meals[0];
+            const compliance = checkRecipeAgainstDiet(recipe, currentUserProfile.diet);
+            renderRecipeDetails({ ...recipe, ...compliance });
+        }
+    }
+
+    function renderRecipeDetails(recipe) {
+        const contentEl = document.querySelector('#recipe-details-modal .modal-content');
+        let ingredientsHtml = '', recipeIngredients = [];
+        for (let i = 1; i <= 20; i++) { const ing = recipe[`strIngredient${i}`]; if (ing) { ingredientsHtml += `<li>${recipe[`strMeasure${i}`] || ''} ${ing}</li>`; recipeIngredients.push(ing.toLowerCase()); } }
+        const allergensFound = currentUserProfile.allergies.filter(allergen => recipeIngredients.some(ing => ing.includes(allergen)));
+        let alertHtml = '';
+        if (allergensFound.length > 0) { alertHtml += `<div class="alert-warning">⚠️ ALLERGY WARNING: May contain: ${allergensFound.join(', ')}</div>`; }
+        if (!recipe.isCompliant && recipe.flaggedIngredients.length > 0) { alertHtml += `<div class="alert-info">⚠️ DIET REVIEW: May need changes. Flagged items: ${recipe.flaggedIngredients.join(', ')}</div>`; }
+        contentEl.innerHTML = `<span class="close-button" onclick="closeModal('recipe-details-modal')">&times;</span>${alertHtml}<h2>${recipe.strMeal}</h2><img src="${recipe.strMealThumb}" alt="${recipe.strMeal}" style="width:100%; border-radius: 8px;"><p><em>Category: ${recipe.strCategory} | Area: ${recipe.strArea}</em></p><h3>Ingredients</h3><ul>${ingredientsHtml}</ul><h3>Instructions</h3><div class="instructions">${recipe.strInstructions.replace(/\n/g, '<br>')}</div>`;
+    }
+
+    function renderBookmarks() {
+        const container = document.getElementById('bookmarks-list');
+        container.innerHTML = '';
+         if (!currentUserProfile.bookmarks || currentUserProfile.bookmarks.length === 0) { container.innerHTML = `<p>You haven't bookmarked any recipes yet.</p>`; return; }
+        currentUserProfile.bookmarks.forEach(recipe => {
+            const card = document.createElement('div');
+            card.className = 'recipe-card';
+            card.innerHTML = `
+                <img src="${recipe.strMealThumb}" alt="${recipe.strMeal}">
+                <div class="recipe-card-content">
+                    <h3>${recipe.strMeal}</h3>
+                    <div class="recipe-card-actions">
+                         <button class="action-button" onclick="toggleBookmark('${recipe.idMeal}', '${recipe.strMeal.replace(/'/g, "\\'")}', '${recipe.strMealThumb}', event)">
+                            Unbookmark
+                        </button>
+                    </div>
+                </div>`;
+            card.addEventListener('click', (e) => {
+                if (e.target.tagName !== 'BUTTON') { getRecipeDetails(recipe.idMeal); }
+            });
+            container.appendChild(card);
+        });
+    }
+
+    // --- UTILITY & PROFILE MANAGEMENT ---
+    function populateDietDropdown() { const selectEl = document.getElementById('diet-select'); selectEl.innerHTML = ''; DIETS.forEach(diet => { const option = document.createElement('option'); option.value = diet; option.textContent = diet; selectEl.appendChild(option); }); }
+    function resetAndShowQuestionnaire() { currentUserProfile = { username: 'Guest', diet: 'Carnivore Diet', allergies: [], bookmarks: [] }; document.getElementById('username').value = ''; document.getElementById('allergies').value = ''; document.getElementById('diet-select').value = 'Carnivore Diet'; openModal('questionnaire-modal'); }
+    function showSection(sectionId) { sections.forEach(section => section.classList.toggle('active', section.id === sectionId)); }
+    function updateUI() { document.querySelector('header h1').textContent = `🍏 ${currentUserProfile.username}'s Recipe Search`; renderBookmarks(); }
+    function openModal(modalId) { document.getElementById(modalId).style.display = 'block'; }
+    function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+    function handleQuestionnaireSubmit(e) { e.preventDefault(); currentUserProfile.username = document.getElementById('username').value || 'User'; currentUserProfile.diet = document.getElementById('diet-select').value; currentUserProfile.allergies = document.getElementById('allergies').value.split(',').map(a => a.trim().toLowerCase()).filter(Boolean); if(!currentUserProfile.bookmarks){ currentUserProfile.bookmarks = []; } saveUserProfile(); updateUI(); closeModal('questionnaire-modal'); }
+    function saveUserProfile() { localStorage.setItem('currentUserProfile', JSON.stringify(currentUserProfile)); }
+    function loadUserProfile() { const profile = localStorage.getItem('currentUserProfile'); if (profile) { currentUserProfile = JSON.parse(profile); } else { resetAndShowQuestionnaire(); } }
+    function saveProfile() { const profileName = document.getElementById('profile-name-input').value.trim(); if (!profileName) { alert('Please enter a name for the profile.'); return; } const savedProfiles = JSON.parse(localStorage.getItem('savedProfiles') || '{}'); savedProfiles[profileName] = currentUserProfile; localStorage.setItem('savedProfiles', JSON.stringify(savedProfiles)); alert(`Profile '${profileName}' saved!`); populateProfileSelector(); document.getElementById('profile-name-input').value = ''; }
+    function populateProfileSelector() { const savedProfiles = JSON.parse(localStorage.getItem('savedProfiles') || '{}'); const selectEl = document.getElementById('profile-select'); selectEl.innerHTML = ''; let hasProfiles = false; for (const name in savedProfiles) { hasProfiles = true; const option = document.createElement('option'); option.value = name; option.textContent = name; selectEl.appendChild(option); } if (!hasProfiles) { const option = document.createElement('option'); option.textContent = 'No saved profiles'; option.disabled = true; selectEl.appendChild(option); } }
+    function loadSelectedProfile() { const profileName = document.getElementById('profile-select').value; if (!profileName || profileName === 'No saved profiles') { alert('No profile selected.'); return; } const savedProfiles = JSON.parse(localStorage.getItem('savedProfiles') || '{}'); currentUserProfile = savedProfiles[profileName]; saveUserProfile(); updateUI(); alert(`Profile '${profileName}' loaded.`); showSection('search-container'); }
+    function deleteSelectedProfile() { const profileName = document.getElementById('profile-select').value; if (!profileName || profileName === 'No saved profiles') { alert('No profile selected.'); return; } if (confirm(`Are you sure you want to delete the profile '${profileName}'?`)) { const savedProfiles = JSON.parse(localStorage.getItem('savedProfiles') || '{}'); delete savedProfiles[profileName]; localStorage.setItem('savedProfiles', JSON.stringify(savedProfiles)); populateProfileSelector(); alert(`Profile '${profileName}' deleted.`); } }
+    function toggleBookmark(id, name, image, event) { event.stopPropagation(); if (!currentUserProfile.bookmarks) { currentUserProfile.bookmarks = []; } const index = currentUserProfile.bookmarks.findIndex(b => b.idMeal === id); if (index > -1) { currentUserProfile.bookmarks.splice(index, 1); } else { currentUserProfile.bookmarks.push({ idMeal: id, strMeal: name, strMealThumb: image }); } saveUserProfile(); if (event.target.parentElement.className === 'recipe-card-actions') { event.target.textContent = (index > -1) ? 'Bookmark' : 'Unbookmark'; } else { renderBookmarks(); } }
+    </script>
+</body>
+</html>
